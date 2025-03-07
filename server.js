@@ -9,6 +9,8 @@ const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const auditRoutes = require("./routes/auditRoutes");
+const limiter = require("./middleware/rateLimiter");
+const logger = require("./middleware/logger");
 
 // Set the Express app
 
@@ -26,6 +28,12 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/notifications", notificationRoutes);
 // audit models
 app.use("/api/audit-logs", auditRoutes);
+app.use(limiter); // Apply rate limiting to all routes
+
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.url} - ${req.ip}`);
+  next();
+});
 // Connect to MongoDB
 
 mongoose.connect(process.env.MONGO_URI, {
