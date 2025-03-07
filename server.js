@@ -8,6 +8,7 @@ const morgan = require("morgan");
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const auditRoutes = require("./routes/auditRoutes");
 
 // Set the Express app
 
@@ -23,6 +24,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 // For notification 
 app.use("/api/notifications", notificationRoutes);
+// audit models
+app.use("/api/audit-logs", auditRoutes);
 // Connect to MongoDB
 
 mongoose.connect(process.env.MONGO_URI, {
