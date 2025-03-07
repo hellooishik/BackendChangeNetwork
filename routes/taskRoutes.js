@@ -1,8 +1,19 @@
 const express = require("express");
 const { authMiddleware, adminMiddleware } = require("../middleware/authMiddleware");
 const Task = require("../models/Task");
+const Notification = require("../models/Notification");
+
+
 
 const router = express.Router();
+const createNotification = async (userId, message) => {
+    try {
+      const notification = new Notification({ user: userId, message });
+      await notification.save();
+    } catch (error) {
+      console.error("Notification Error:", error);
+    }
+  };
 
 /**
  * @route   POST /api/tasks
@@ -10,23 +21,29 @@ const router = express.Router();
  * @access  Private (User/Admin)
  */
 router.post("/", authMiddleware, async (req, res) => {
-  try {
-    const { title, description, dueDate, assignedTo } = req.body;
-
-    const task = new Task({
-      title,
-      description,
-      dueDate,
-      assignedTo,
-      createdBy: req.user.userId,
-    });
-
-    await task.save();
-    res.status(201).json(task);
-  } catch (error) {
-    res.status(500).json({ message: "Error creating task", error });
-  }
-});
+    try {
+      const { title, description, dueDate, assignedTo } = req.body;
+  
+      const task = new Task({
+        title,
+        description,
+        dueDate,
+        assignedTo,
+        createdBy: req.user.userId,
+      });
+  
+      await task.save();
+  
+      // Notify the assigned user
+      if (assignedTo) {
+        await createNotification(assignedTo, `You have been assigned a new task: ${title}`);
+      }
+  
+      res.status(201).json(task);
+    } catch (error) {
+      res.status(500).json({ message: "Error creating task", error });
+    }
+  });
 
 /**
  * @route   GET /api/tasks
@@ -53,23 +70,33 @@ router.get("/", authMiddleware, async (req, res) => {
  * @desc    Update a task
  * @access  Private (Only task owner or admin)
  */
-router.put("/:id", authMiddleware, async (req, res) => {
-  try {
-    let task = await Task.findById(req.params.id);
-
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    if (task.createdBy.toString() !== req.user.userId && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Unauthorized to update this task" });
+router.put("/:id/status", authMiddleware, async (req, res) => {
+    try {
+      const { status } = req.body;
+  
+      // Check if status is valid
+      if (!["Pending", "In Progress", "Completed"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status update" });
+      }
+  
+      let task = await Task.findById(req.params.id);
+  
+      if (!task) return res.status(404).json({ message: "Task not found" });
+  
+      // Only the task owner OR admin can update the status
+      if (task.createdBy.toString() !== req.user.userId && req.user.role !== "admin") {
+        return res.status(403).json({ message: "Unauthorized to update this task" });
+      }
+  
+      task.status = status;
+      await task.save();
+  
+      res.status(200).json({ message: "Task status updated", task });
+    } catch (error) {
+      res.status(500).json({ message: "Error updating task status", error });
     }
-
-    task = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.status(200).json(task);
-  } catch (error) {
-    res.status(500).json({ message: "Error updating task", error });
-  }
-});
-
+  });
+  
 /**
  * @route   DELETE /api/tasks/:id
  * @desc    Delete a task

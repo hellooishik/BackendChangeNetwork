@@ -7,6 +7,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 const authRoutes = require("./routes/authRoutes");
 const taskRoutes = require("./routes/taskRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 // Set the Express app
 
@@ -18,8 +19,10 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan("dev"));
 app.use("/api/auth", authRoutes);
+// For Task Route
 app.use("/api/tasks", taskRoutes);
-
+// For notification 
+app.use("/api/notifications", notificationRoutes);
 // Connect to MongoDB
 
 mongoose.connect(process.env.MONGO_URI, {
